@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL'den Görselleştirmeye — code2work DS</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --green: #71D000;
+    --green-dark: #5AB300;
+    --black: #15191F;
+    --soft-bg: #F5F4F4;
+    --orange: #FF6B35;
+    --blue: #0066C8;
+    --teal: #2C857A;
+    --code-bg: #1a1e2e;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--black);
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    padding: 60px 80px;
+    position: relative;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .slide.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Brand bar */
+  .brand-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--teal), var(--blue));
+    z-index: 100;
+  }
+
+  /* Progress */
+  .progress-bar {
+    position: fixed;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: var(--green);
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  /* Slide counter */
+  .slide-counter {
+    position: fixed;
+    bottom: 20px;
+    right: 40px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.3);
+    font-weight: 300;
+    z-index: 100;
+  }
+
+  /* Logo */
+  .logo {
+    position: fixed;
+    top: 20px;
+    left: 40px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green);
+    z-index: 100;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: rgba(255,255,255,0.5); font-weight: 400; }
+
+  /* Nav hint */
+  .nav-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 40px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.2);
+    z-index: 100;
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+  }
+
+  h2 {
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  h3 {
+    font-size: 28px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: rgba(255,255,255,0.9);
+  }
+
+  p, li {
+    font-size: 22px;
+    line-height: 1.6;
+    font-weight: 300;
+    color: rgba(255,255,255,0.8);
+  }
+
+  ul { list-style: none; }
+  ul li { padding: 8px 0; padding-left: 28px; position: relative; }
+  ul li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 18px;
+    width: 10px; height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+  }
+
+  .accent { color: var(--green); }
+  .accent-orange { color: var(--orange); }
+  .accent-blue { color: var(--blue); }
+  .accent-teal { color: var(--teal); }
+  .dim { color: rgba(255,255,255,0.4); }
+
+  /* Code blocks */
+  pre {
+    background: var(--code-bg);
+    border-radius: 12px;
+    padding: 24px 32px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 17px;
+    line-height: 1.6;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 900px;
+    border: 1px solid rgba(113, 208, 0, 0.15);
+    margin-top: 16px;
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    background: rgba(113, 208, 0, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 20px;
+  }
+
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm { color: #546e7a; }
+  .num { color: #f78c6c; }
+  .op { color: #89ddff; }
+
+  /* Layouts */
+  .center-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 900px;
+  }
+
+  .left-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    width: 100%;
+    max-width: 1100px;
+    align-items: start;
+  }
+
+  /* Pipeline */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 32px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pipeline-step {
+    background: rgba(113, 208, 0, 0.1);
+    border: 1px solid rgba(113, 208, 0, 0.3);
+    border-radius: 12px;
+    padding: 16px 28px;
+    font-size: 20px;
+    font-weight: 500;
+    transition: all 0.3s;
+  }
+
+  .pipeline-step:hover {
+    background: rgba(113, 208, 0, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .pipeline-arrow {
+    font-size: 24px;
+    color: var(--green);
+  }
+
+  /* Cards */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  .card h3 { font-size: 22px; margin-bottom: 12px; }
+  .card p { font-size: 18px; }
+
+  /* Big number */
+  .big-num {
+    font-size: 80px;
+    font-weight: 700;
+    color: var(--green);
+    line-height: 1;
+  }
+
+  /* Section indicator */
+  .section-tag {
+    display: inline-block;
+    background: rgba(113, 208, 0, 0.15);
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Subtitle */
+  .subtitle {
+    font-size: 24px;
+    color: rgba(255,255,255,0.5);
+    font-weight: 300;
+    margin-top: 8px;
+  }
+
+  /* Highlight box */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(113,208,0,0.1), rgba(44,133,122,0.1));
+    border-left: 4px solid var(--green);
+    border-radius: 0 12px 12px 0;
+    padding: 20px 28px;
+    margin: 16px 0;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .highlight-box p {
+    font-size: 20px;
+    font-style: italic;
+    color: rgba(255,255,255,0.9);
+  }
+
+  /* Grid 3 */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+    max-width: 1100px;
+    margin-top: 24px;
+  }
+
+  .grid-3 .card { text-align: center; }
+  .grid-3 .card .big-num { font-size: 48px; margin-bottom: 8px; }
+
+  /* Table */
+  table {
+    width: 100%;
+    max-width: 800px;
+    border-collapse: collapse;
+    margin-top: 16px;
+  }
+  th, td {
+    padding: 12px 20px;
+    text-align: left;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  th {
+    color: var(--green);
+    font-weight: 600;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td { color: rgba(255,255,255,0.75); font-weight: 300; }
+
+  /* Title slide special */
+  .title-slide {
+    background: radial-gradient(ellipse at 30% 50%, rgba(113,208,0,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(44,133,122,0.06) 0%, transparent 50%);
+  }
+
+  .section-slide {
+    background: radial-gradient(ellipse at 50% 50%, rgba(113,208,0,0.06) 0%, transparent 60%);
+  }
+</style>
+</head>
+<body>
+
+<div class="brand-bar"></div>
+<div class="logo">code2work <span>| DS Live</span></div>
+<div class="progress-bar" id="progress"></div>
+<div class="slide-counter" id="counter"></div>
+<div class="nav-hint">&#8592; &#8594; ile gezin</div>
+
+<!-- SLIDE 1: Title -->
+<div class="slide title-slide active" data-slide="1">
+  <div class="center-content">
+    <div class="section-tag">Canlı Ders &mdash; 2 Nisan 2026</div>
+    <h1>SQL'den Görselleştirmeye:<br><span class="accent">Veriden Hikaye Çıkarmak</span></h1>
+    <p class="subtitle">Northwind DB üzerinden uçtan uca veri analizi</p>
+    <div class="pipeline">
+      <div class="pipeline-step">SQL</div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">Python</div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">Pandas</div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">NumPy</div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">Matplotlib</div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step accent">Hikaye</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: Motivation -->
+<div class="slide" data-slide="2">
+  <div class="center-content">
+    <h2>Gerçek Hayatta Ne Olur?</h2>
+    <div class="highlight-box">
+      <p>"Bir şirkete girdiğinizde size bir veritabanı verirler ve derler ki:<br>
+      <strong>'Şu verileri analiz et, bize rapor çıkar.'</strong>"</p>
+    </div>
+    <p style="margin-top: 32px; font-size: 24px;">Bugün tam olarak bunu yapacağız.</p>
+    <div class="grid-3" style="margin-top: 40px;">
+      <div class="card">
+        <div class="big-num">1</div>
+        <p>Veriyi çek</p>
+      </div>
+      <div class="card">
+        <div class="big-num">2</div>
+        <p>Analiz et</p>
+      </div>
+      <div class="card">
+        <div class="big-num">3</div>
+        <p>Görsel oluştur</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: Northwind -->
+<div class="slide" data-slide="3">
+  <div class="center-content">
+    <div class="section-tag">Veritabanı</div>
+    <h2>Northwind Nedir?</h2>
+    <p style="margin-bottom: 32px;">Microsoft'un eğitim amaçlı oluşturduğu klasik bir veritabanı.<br>
+    Bir <span class="accent">yiyecek-içecek şirketinin</span> sipariş, ürün ve müşteri verilerini içerir.</p>
+    <table>
+      <tr><th>Tablo</th><th>Ne içerir?</th><th>Satir</th></tr>
+      <tr><td><code>products</code></td><td>Ürünler (isim, fiyat, kategori)</td><td>77</td></tr>
+      <tr><td><code>orders</code></td><td>Siparişler (tarih, müşteri)</td><td>830</td></tr>
+      <tr><td><code>order_details</code></td><td>Sipariş detayları (miktar, fiyat)</td><td>2,155</td></tr>
+      <tr><td><code>customers</code></td><td>Müşteriler (şirket, ülke)</td><td>91</td></tr>
+      <tr><td><code>categories</code></td><td>Ürün kategorileri</td><td>8</td></tr>
+    </table>
+    <p style="margin-top: 24px; font-size: 16px;" class="dim">github.com/pthom/northwind_psql</p>
+  </div>
+</div>
+
+<!-- SLIDE 4: Section 1 -->
+<div class="slide section-slide" data-slide="4">
+  <div class="center-content">
+    <div class="big-num" style="margin-bottom: 16px;">01</div>
+    <h1>SQL ile Veriyi Tanımak</h1>
+    <p class="subtitle">pgAdmin'de canlı sorgular</p>
+  </div>
+</div>
+
+<!-- SLIDE 5: SQL Queries -->
+<div class="slide" data-slide="5">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 1 &mdash; SQL</div>
+    <h3>Temel Sorgular</h3>
+    <pre><span class="cm">-- Kaç ürünümüz var?</span>
+<span class="kw">SELECT</span> <span class="fn">COUNT</span>(*) <span class="kw">FROM</span> products;
+
+<span class="cm">-- Kategorilere göre ürün sayısı</span>
+<span class="kw">SELECT</span> c.category_name, <span class="fn">COUNT</span>(p.product_id) <span class="kw">AS</span> urun_sayisi
+<span class="kw">FROM</span> products p
+<span class="kw">JOIN</span> categories c <span class="kw">ON</span> p.category_id <span class="op">=</span> c.category_id
+<span class="kw">GROUP BY</span> c.category_name
+<span class="kw">ORDER BY</span> urun_sayisi <span class="kw">DESC</span>;</pre>
+  </div>
+</div>
+
+<!-- SLIDE 6: SQL Advanced -->
+<div class="slide" data-slide="6">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 1 &mdash; SQL</div>
+    <h3>Aylık Satış Trendi</h3>
+    <pre><span class="kw">SELECT</span>
+  <span class="fn">DATE_TRUNC</span>(<span class="str">'month'</span>, o.order_date) <span class="kw">AS</span> ay,
+  <span class="fn">ROUND</span>(<span class="fn">CAST</span>(<span class="fn">SUM</span>(od.unit_price <span class="op">*</span> od.quantity) <span class="kw">AS</span> numeric), <span class="num">2</span>) <span class="kw">AS</span> toplam_satis
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span> order_details od <span class="kw">ON</span> o.order_id <span class="op">=</span> od.order_id
+<span class="kw">GROUP BY</span> ay
+<span class="kw">ORDER BY</span> ay;</pre>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p><code>CAST(... AS numeric)</code> &mdash; tip dönüşümü yapar.<br>
+      <code>ROUND()</code> fonksiyonu numeric tip bekler, bu yüzden önce dönüştürüyoruz.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: SQL Thinking -->
+<div class="slide" data-slide="7">
+  <div class="center-content">
+    <h2>Her Sorgudan Sonra Durun ve Sorun:</h2>
+    <div style="margin-top: 32px; text-align: left;">
+      <ul>
+        <li><span class="accent">"Bu bize ne anlatıyor?"</span></li>
+        <li>"Beverages en çok ürüne sahip kategori &mdash; neden önemli?"</li>
+        <li>"Aylık satışlarda bir düşüş var mı? <span class="accent-orange">Nerede?</span>"</li>
+        <li>"En çok sipariş veren müşteri kimdir?"</li>
+      </ul>
+    </div>
+    <div class="highlight-box" style="margin-top: 40px;">
+      <p>Veri analisti sadece sorgu yazmaz &mdash; <strong>soru sorar.</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 8: Transition -->
+<div class="slide" data-slide="8">
+  <div class="center-content">
+    <p style="font-size: 24px; color: rgba(255,255,255,0.4); margin-bottom: 16px;">Şimdi bu verileri SQL'de gördük ama...</p>
+    <h2>Grafik çıkamıyoruz.<br>Rapor oluşturamıyoruz.</h2>
+    <p style="font-size: 28px; margin-top: 32px;">İşte <span class="accent">Python</span> burada devreye giriyor.</p>
+  </div>
+</div>
+
+<!-- SLIDE 9: Section 2 -->
+<div class="slide section-slide" data-slide="9">
+  <div class="center-content">
+    <div class="big-num" style="margin-bottom: 16px;">02</div>
+    <h1>Python ile Veritabanına<br>Bağlanmak</h1>
+    <p class="subtitle">psycopg2 kütüphanesi</p>
+  </div>
+</div>
+
+<!-- SLIDE 10: Python Connection -->
+<div class="slide" data-slide="10">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 2 &mdash; Python</div>
+    <h3>PostgreSQL'e Bağlanma</h3>
+    <pre><span class="kw">import</span> psycopg2
+
+conn <span class="op">=</span> psycopg2.<span class="fn">connect</span>(
+    host<span class="op">=</span><span class="str">"localhost"</span>,
+    database<span class="op">=</span><span class="str">"northwind"</span>,
+    user<span class="op">=</span><span class="str">"postgres"</span>,
+    password<span class="op">=</span><span class="str">"sifreniz"</span>
+)
+
+cursor <span class="op">=</span> conn.<span class="fn">cursor</span>()
+cursor.<span class="fn">execute</span>(<span class="str">"SELECT COUNT(*) FROM products"</span>)
+<span class="fn">print</span>(<span class="str">"Toplam urun:"</span>, cursor.<span class="fn">fetchone</span>()[<span class="num">0</span>])</pre>
+    <p style="margin-top: 20px;">Az önce pgAdmin'de yaptığınız şeyin <strong>aynısını</strong> Python'dan yaptık.</p>
+  </div>
+</div>
+
+<!-- SLIDE 11: Section 3 -->
+<div class="slide section-slide" data-slide="11">
+  <div class="center-content">
+    <div class="big-num" style="margin-bottom: 16px;">03</div>
+    <h1>SQL &rarr; Pandas<br>DataFrame</h1>
+    <p class="subtitle">pd.read_sql() ile SQL sonucunu DataFrame'e çevirme</p>
+  </div>
+</div>
+
+<!-- SLIDE 12: pd.read_sql -->
+<div class="slide" data-slide="12">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 3 &mdash; SQL to Pandas</div>
+    <h3><code>pd.read_sql()</code> &mdash; Tek Satırda</h3>
+    <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+df <span class="op">=</span> pd.<span class="fn">read_sql</span>(<span class="str">"""
+    SELECT c.category_name AS kategori,
+           COUNT(p.product_id) AS urun_sayisi
+    FROM products p
+    JOIN categories c ON p.category_id = c.category_id
+    GROUP BY c.category_name
+    ORDER BY urun_sayisi DESC
+"""</span>, conn)</pre>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p>SQL'in gücü + Pandas'ın esnekliği = <strong>bir arada!</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 13: Section 4 -->
+<div class="slide section-slide" data-slide="13">
+  <div class="center-content">
+    <div class="big-num" style="margin-bottom: 16px;">04</div>
+    <h1>Pandas ile Veriyi<br>Keşfetme</h1>
+    <p class="subtitle">info(), describe(), groupby(), filtreleme</p>
+  </div>
+</div>
+
+<!-- SLIDE 14: Pandas Exploration -->
+<div class="slide" data-slide="14">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 4 &mdash; Pandas</div>
+    <h3>İlk Adımlar: Veriyi Tanımak</h3>
+    <pre>df_orders.<span class="fn">shape</span>          <span class="cm"># kaç satır, kaç kolon</span>
+df_orders.<span class="fn">info</span>()         <span class="cm"># kolon tipleri, null var mı</span>
+df_orders.<span class="fn">describe</span>()     <span class="cm"># istatistiksel özet</span>
+df_orders.<span class="fn">isnull</span>().<span class="fn">sum</span>()  <span class="cm"># eksik veri kontrolü</span></pre>
+    <div style="margin-top: 32px;">
+      <h3>Gruplama &amp; Analiz</h3>
+      <pre><span class="cm"># Ülkelere göre toplam satış</span>
+df_orders.<span class="fn">groupby</span>(<span class="str">'ulke'</span>)[<span class="str">'toplam'</span>].<span class="fn">sum</span>().<span class="fn">sort_values</span>(ascending<span class="op">=</span><span class="kw">False</span>)
+
+<span class="cm"># Kategorilere göre ortalama sipariş tutarı</span>
+df_orders.<span class="fn">groupby</span>(<span class="str">'kategori'</span>)[<span class="str">'toplam'</span>].<span class="fn">mean</span>().<span class="fn">round</span>(<span class="num">2</span>)</pre>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 15: Interactive -->
+<div class="slide" data-slide="15">
+  <div class="center-content">
+    <h2 style="margin-bottom: 48px;">Sizce...</h2>
+    <div class="two-col">
+      <div class="card" style="text-align: center;">
+        <h3 class="accent">Hangi ülke en çok satış yapıyordur?</h3>
+        <p style="margin-top: 16px; font-size: 64px;">&#127758;</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <h3 class="accent-orange">En pahalı kategori hangisidir?</h3>
+        <p style="margin-top: 16px; font-size: 64px;">&#128176;</p>
+      </div>
+    </div>
+    <p style="margin-top: 40px; font-size: 20px;" class="dim">Tahmin edin, sonra kodu çalıştıralım!</p>
+  </div>
+</div>
+
+<!-- SLIDE 16: Section 5 - NumPy -->
+<div class="slide section-slide" data-slide="16">
+  <div class="center-content">
+    <div class="big-num" style="margin-bottom: 16px;">05</div>
+    <h1>NumPy — Sayısal<br>Hesaplamanın Temeli</h1>
+    <p class="subtitle">Pandas'ın altında çalışan motor</p>
+  </div>
+</div>
+
+<!-- SLIDE 17: NumPy Array vs List -->
+<div class="slide" data-slide="17">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 5 &mdash; NumPy</div>
+    <h3>NumPy Array vs Python Listesi</h3>
+    <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+fiyatlar <span class="op">=</span> np.<span class="fn">array</span>([<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>, <span class="num">50</span>])
+
+<span class="cm"># Tek seferde tüm elemanlara işlem</span>
+<span class="fn">print</span>(<span class="str">"KDV ekle:"</span>, fiyatlar <span class="op">*</span> <span class="num">1.18</span>)
+<span class="fn">print</span>(<span class="str">"Toplam:"</span>, fiyatlar.<span class="fn">sum</span>())
+<span class="fn">print</span>(<span class="str">"Ortalama:"</span>, fiyatlar.<span class="fn">mean</span>())</pre>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p>Python listesiyle bunu yapmak için <strong>döngü</strong> yazmanız gerekir.<br>
+      NumPy ile <strong>tek satırda</strong> halledersiniz &mdash; ve 10-100x daha hızlı!</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 18: NumPy Stats -->
+<div class="slide" data-slide="18">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 5 &mdash; NumPy</div>
+    <h3>Gerçek Veri Üzerinde İstatistikler</h3>
+    <pre>satislar <span class="op">=</span> df_orders[<span class="str">'toplam'</span>].values  <span class="cm"># NumPy array!</span>
+
+<span class="fn">print</span>(<span class="str">"Ortalama:"</span>, np.<span class="fn">mean</span>(satislar))
+<span class="fn">print</span>(<span class="str">"Medyan:"</span>,   np.<span class="fn">median</span>(satislar))
+<span class="fn">print</span>(<span class="str">"Std sapma:"</span>, np.<span class="fn">std</span>(satislar))
+<span class="fn">print</span>(<span class="str">"Min:"</span>,      np.<span class="fn">min</span>(satislar))
+<span class="fn">print</span>(<span class="str">"Max:"</span>,      np.<span class="fn">max</span>(satislar))</pre>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p><strong>Medyan &lt; Ortalama</strong> ise &rarr; büyük siparişler ortalamayı yukarı çekiyor.<br>
+      Çoğu sipariş aslında ortalamanın altında. Buna <span class="accent">çarpık dağılım</span> denir.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 19: Percentile -->
+<div class="slide" data-slide="19">
+  <div class="left-content">
+    <div class="section-tag">Bölüm 5 &mdash; NumPy</div>
+    <h3>Yüzdelik Dilimler (Percentile)</h3>
+    <pre>q25, q50, q75 <span class="op">=</span> np.<span class="fn">percentile</span>(satislar, [<span class="num">25</span>, <span class="num">50</span>, <span class="num">75</span>])
+
+<span class="fn">print</span>(<span class="str">f"Alt çeyrek (Q1):  ${q25:,.2f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Medyan (Q2):      ${q50:,.2f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Üst çeyrek (Q3):  ${q75:,.2f}"</span>)</pre>
+    <div class="two-col" style="margin-top: 24px; gap: 24px;">
+      <div class="card">
+        <h3 class="accent">%75'i Q3'ün altında</h3>
+        <p>Tipik sipariş aralığını gösterir</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-orange">Q3 üstündekiler &rarr; VIP</h3>
+        <p>Bu müşterilere özel ilgi göster!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 20: NumPy Summary -->
+<div class="slide" data-slide="20">
+  <div class="center-content">
+    <div class="section-tag">Bölüm 5 &mdash; NumPy</div>
+    <h3 style="margin-bottom: 32px;">Neden NumPy?</h3>
+    <table>
+      <tr><th>Python Listesi</th><th>NumPy Array</th></tr>
+      <tr><td>Yavaş (döngü gerekir)</td><td><strong>10-100x hızlı</strong> (toplu işlem)</td></tr>
+      <tr><td>İstatistik fonksiyonu yok</td><td>mean, median, std, percentile</td></tr>
+      <tr><td>Tek boyutlu düşünce</td><td>Matris, çok boyutlu veri</td></tr>
+    </table>
+    <div class="highlight-box" style="margin-top: 32px;">
+      <p><strong>Pandas</strong> zaten NumPy üzerine kurulu!<br>
+      <code>df['kolon'].values</code> = NumPy array</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 21: Section 6 - Matplotlib -->
+<div class="slide section-slide" data-slide="21">
+  <div class="center-content">
+    <div class="big-num" style="margin-bottom: 16px;">06</div>
+    <h1>Matplotlib ile<br>Görselleştirme</h1>
+    <p class="subtitle">5 farklı grafik türü</p>
+  </div>
+</div>
+
+<!-- SLIDE 17: Chart Types -->
+<div class="slide" data-slide="17">
+  <div class="center-content">
+    <div class="section-tag">Bölüm 5 &mdash; Matplotlib</div>
+    <h3 style="margin-bottom: 32px;">Bugün Oluşturacağımız Grafikler</h3>
+    <div class="grid-3" style="grid-template-columns: 1fr 1fr; max-width: 900px;">
+      <div class="card">
+        <h3>&#128202; Bar Chart</h3>
+        <p>Ülkelere göre satış</p>
+      </div>
+      <div class="card">
+        <h3>&#128200; Line Chart</h3>
+        <p>Aylık satış trendi</p>
+      </div>
+      <div class="card">
+        <h3>&#127856; Pie Chart</h3>
+        <p>Kategori dağılımı</p>
+      </div>
+      <div class="card">
+        <h3>&#128208; Subplot</h3>
+        <p>Ürün + Müşteri karşılaştırma</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 24px; max-width: 900px; width: 100%; text-align: center;">
+      <h3>&#128293; Multi-line (İleri)</h3>
+      <p>Kategori bazlı aylık trend</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 18: Bar Chart Code -->
+<div class="slide" data-slide="18">
+  <div class="left-content">
+    <div class="section-tag">Grafik 1 &mdash; Bar Chart</div>
+    <h3>Ülkelere Göre Satış</h3>
+    <pre>top10 <span class="op">=</span> ulke_satis.<span class="fn">head</span>(<span class="num">10</span>)
+
+plt.<span class="fn">figure</span>(figsize<span class="op">=</span>(<span class="num">12</span>, <span class="num">6</span>))
+plt.<span class="fn">barh</span>(top10.index[<span class="op">::-</span><span class="num">1</span>], top10.values[<span class="op">::-</span><span class="num">1</span>], color<span class="op">=</span><span class="str">'#2ecc71'</span>)
+plt.<span class="fn">xlabel</span>(<span class="str">'Toplam Satis ($)'</span>)
+plt.<span class="fn">title</span>(<span class="str">'En Cok Satis Yapilan 10 Ulke'</span>)
+plt.<span class="fn">tight_layout</span>()
+plt.<span class="fn">show</span>()</pre>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p>Bir yöneticiye "USA en çok satış yapan ülke" demek yerine<br>
+      <strong>bu grafiği göstermek</strong> çok daha etkili.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 19: Line Chart Code -->
+<div class="slide" data-slide="19">
+  <div class="left-content">
+    <div class="section-tag">Grafik 2 &mdash; Line Chart</div>
+    <h3>Aylık Satış Trendi</h3>
+    <pre>plt.<span class="fn">figure</span>(figsize<span class="op">=</span>(<span class="num">14</span>, <span class="num">5</span>))
+plt.<span class="fn">plot</span>(df_aylik[<span class="str">'ay'</span>], df_aylik[<span class="str">'toplam_satis'</span>],
+     marker<span class="op">=</span><span class="str">'o'</span>, color<span class="op">=</span><span class="str">'#3498db'</span>, linewidth<span class="op">=</span><span class="num">2</span>)
+plt.<span class="fn">fill_between</span>(df_aylik[<span class="str">'ay'</span>], df_aylik[<span class="str">'toplam_satis'</span>],
+                 alpha<span class="op">=</span><span class="num">0.1</span>)
+plt.<span class="fn">grid</span>(<span class="kw">True</span>, alpha<span class="op">=</span><span class="num">0.3</span>)
+plt.<span class="fn">show</span>()</pre>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <p>Bu grafikte bir <span class="accent-orange">anomali</span> görüyorsunuz &mdash; şu ayda ani bir düşüş var.<br>
+      Neden olabilir? Tatil mi? Stok sorunu mu?<br>
+      <strong>İşte veri analisti böyle sorular sorar.</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 20: Pie + Subplot -->
+<div class="slide" data-slide="20">
+  <div class="left-content">
+    <div class="section-tag">Grafik 3-4</div>
+    <div class="two-col">
+      <div>
+        <h3>Pie Chart</h3>
+        <pre style="font-size: 14px; padding: 16px;">plt.<span class="fn">pie</span>(
+  kategori_toplam,
+  labels<span class="op">=</span>kategori_toplam.index,
+  autopct<span class="op">=</span><span class="str">'%1.1f%%'</span>,
+  startangle<span class="op">=</span><span class="num">140</span>
+)
+plt.<span class="fn">title</span>(<span class="str">'Kategori Dagilimi'</span>)</pre>
+      </div>
+      <div>
+        <h3>Subplot (2 grafik yan yana)</h3>
+        <pre style="font-size: 14px; padding: 16px;">fig, axes <span class="op">=</span> plt.<span class="fn">subplots</span>(<span class="num">1</span>, <span class="num">2</span>)
+
+<span class="cm"># Sol: En çok satan 5 ürün</span>
+axes[<span class="num">0</span>].<span class="fn">barh</span>(...)
+
+<span class="cm"># Sag: En çok harcayan 5 müşteri</span>
+axes[<span class="num">1</span>].<span class="fn">barh</span>(...)</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 21: Multi-line -->
+<div class="slide" data-slide="21">
+  <div class="left-content">
+    <div class="section-tag">Grafik 5 &mdash; İleri Seviye</div>
+    <h3>Kategori Bazlı Aylık Trend</h3>
+    <pre>top3 <span class="op">=</span> kategori_toplam.<span class="fn">sort_values</span>(ascending<span class="op">=</span><span class="kw">False</span>).<span class="fn">head</span>(<span class="num">3</span>).index
+df_top3 <span class="op">=</span> df_orders[df_orders[<span class="str">'kategori'</span>].<span class="fn">isin</span>(top3)]
+pivot <span class="op">=</span> df_top3.<span class="fn">groupby</span>([<span class="str">'ay'</span>, <span class="str">'kategori'</span>])[<span class="str">'toplam'</span>].<span class="fn">sum</span>().<span class="fn">unstack</span>()
+
+<span class="kw">for</span> kat <span class="kw">in</span> top3:
+    plt.<span class="fn">plot</span>(pivot.index, pivot[kat],
+           marker<span class="op">=</span><span class="str">'o'</span>, label<span class="op">=</span>kat)
+plt.<span class="fn">legend</span>()
+plt.<span class="fn">show</span>()</pre>
+    <p style="margin-top: 16px;">3 kategorinin zaman içindeki değişimini tek grafikte görüyoruz.</p>
+  </div>
+</div>
+
+<!-- SLIDE 22: Summary Pipeline -->
+<div class="slide" data-slide="22">
+  <div class="center-content">
+    <h2>Bugün Ne Yaptık?</h2>
+    <div class="pipeline" style="margin-top: 40px;">
+      <div class="pipeline-step"><strong>SQL</strong><br><span class="dim" style="font-size: 14px;">Veriyi çektik</span></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><strong>Python</strong><br><span class="dim" style="font-size: 14px;">Bağlandık</span></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><strong>Pandas</strong><br><span class="dim" style="font-size: 14px;">Analiz ettik</span></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><strong>NumPy</strong><br><span class="dim" style="font-size: 14px;">Hesapladık</span></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><strong>Matplotlib</strong><br><span class="dim" style="font-size: 14px;">Görsel oluşturduk</span></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step" style="background: rgba(113,208,0,0.2); border-color: var(--green);"><strong class="accent">Hikaye</strong><br><span class="dim" style="font-size: 14px;">Anlam verdik</span></div>
+    </div>
+    <p style="margin-top: 40px; font-size: 24px;">Bir veri analisti <strong>her gün</strong> tam olarak bunu yapar.</p>
+  </div>
+</div>
+
+<!-- SLIDE 23: Formula -->
+<div class="slide section-slide" data-slide="23">
+  <div class="center-content">
+    <h2 style="margin-bottom: 40px;">Temel Akış Her Zaman Aynı</h2>
+    <div style="font-size: 32px; font-weight: 600; letter-spacing: 2px;">
+      <span class="accent">Veri</span>
+      <span class="dim">&rarr;</span>
+      Temizlik
+      <span class="dim">&rarr;</span>
+      <span class="accent-blue">Analiz</span>
+      <span class="dim">&rarr;</span>
+      <span class="accent-teal">Hesaplama</span>
+      <span class="dim">&rarr;</span>
+      <span class="accent-orange">Görselleştirme</span>
+      <span class="dim">&rarr;</span>
+      <span class="accent">Hikaye</span>
+    </div>
+    <p style="margin-top: 48px; font-size: 20px; color: rgba(255,255,255,0.5);">İlerde buna istatistik de eklenecek &mdash; ortalama, medyan, korelasyon...<br>Ama temel akış hep bu.</p>
+  </div>
+</div>
+
+<!-- SLIDE 24: Homework -->
+<div class="slide" data-slide="24">
+  <div class="center-content">
+    <div class="section-tag">Bu Hafta</div>
+    <h2>Siz de Deneyin!</h2>
+    <p style="margin-bottom: 32px;">Northwind üzerinde kendi sorunuzu sorun:</p>
+    <div class="two-col" style="max-width: 900px;">
+      <div class="card">
+        <p>"Hangi <span class="accent">çalışanlar</span> en çok satış yapıyor?"</p>
+      </div>
+      <div class="card">
+        <p>"Hangi <span class="accent-orange">ülkeler</span> hangi kategorileri tercih ediyor?"</p>
+      </div>
+      <div class="card">
+        <p>"<span class="accent-blue">Yıllık</span> satış değişimi nasıl?"</p>
+      </div>
+      <div class="card">
+        <p>"En <span class="accent-teal">kârlı</span> ürünler hangileri?"</p>
+      </div>
+    </div>
+    <p style="margin-top: 32px;">Pandas ile analiz edin, bir grafik çıkartın.</p>
+  </div>
+</div>
+
+<!-- SLIDE 25: End -->
+<div class="slide title-slide" data-slide="25">
+  <div class="center-content">
+    <h1>Sorularınız?</h1>
+    <p style="margin-top: 24px; font-size: 20px;" class="dim">github.com/pthom/northwind_psql</p>
+    <div style="margin-top: 60px;">
+      <p style="font-size: 18px; color: rgba(255,255,255,0.3);">code2work &mdash; 2026</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+
+  function showSlide(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, slides.length - 1));
+    slides[current].classList.add('active');
+    // Update progress
+    const pct = ((current) / (slides.length - 1)) * 100;
+    document.getElementById('progress').style.width = pct + '%';
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + slides.length;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault();
+      showSlide(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      showSlide(current - 1);
+    } else if (e.key === 'Home') {
+      showSlide(0);
+    } else if (e.key === 'End') {
+      showSlide(slides.length - 1);
+    }
+  });
+
+  // Touch support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? showSlide(current + 1) : showSlide(current - 1);
+    }
+  });
+
+  // Click to advance
+  document.addEventListener('click', (e) => {
+    if (e.clientX > window.innerWidth / 2) {
+      showSlide(current + 1);
+    } else {
+      showSlide(current - 1);
+    }
+  });
+
+  // Init
+  showSlide(0);
+</script>
+
+</body>
+</html>
